@@ -18,17 +18,14 @@ u0 = 1.256637061*10^-6; %H/m
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Simulated Environment Settings
-STEPS = 2000;
-Nz = 180;
-dz = 0.02;
-f_max = 5e9;  % 10Ghz
-dc = .016779;
-
+f_max = 5e9;  % 5Ghz
 f0 = 2.4e9; % Anti-reflective frequency;
 
 erair = 1;
 erslab = 12;
+dslab = 12*2.54/100;
 
+% Find our anti-reflective info
 er2 = sqrt(erair*erslab);
 n2 = sqrt(er2);
 lam0 = c0/f0;
@@ -44,10 +41,15 @@ d_wl = lambda_min/N_lambda;
 N_d = 4;
 d_d = dc/4; % since we are only working with freespace we will set d to 1;
 dz = min(d_wl, d_d);
-Nz = ceil(dc/dz);
-dz = dc/Nz;
+Nprime = ceil(dc/dz);
+dz = dc/Nprime;
 
-Nz = Nz + 2*(10) + 3;
+Nz = ceil((2*dc+dslab)/dz);
+
+
+disp(Nz);
+Nz = Nz + 2*(100) + 3;
+
 
 disp(['lambda_min: ' num2str(lambda_min)]);
 disp(['d_wl: ' num2str(d_wl)]);
@@ -56,6 +58,7 @@ disp(['d_d: ' num2str(d_d)]);
 disp(['Nz: ' num2str(Nz)]);
 disp(['dz: ' num2str(dz)]);
 disp(['Length: ' num2str(Nz * dz)]);
+
 %Grid Axis
 za=[0:Nz-1]*dz;
 
@@ -72,16 +75,12 @@ t0 = 6*tau;              % Delay/Pulse Position
 T = 12*tau + 5*(nmax*Nz*dz/c0);
 STEPS = ceil(T/dt);
 
-
 disp(['dt: ' num2str(dt)]);
 disp(['tau: ' num2str(tau)]);
 disp(['t0: ' num2str(t0)]);
 disp(['Steps: ' num2str(STEPS)]);
 
-
 ta = [0:STEPS-1]*dt;     % Time Axis;
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Model
@@ -91,20 +90,18 @@ ta = [0:STEPS-1]*dt;     % Time Axis;
 ER = ones([1 Nz]);
 UR = ones([1 Nz]);
 
-zstart = 2+10+1-1;
-zend = zstart;
+zstart = 2+100;
+zend = floor(zstart + dc/dz);
 ER(zstart: zend) = 3.46;
 
 zstart = zend + 1;
-zend = zstart + 18;
+zend = floor(zstart + dslab/dz);
 ER(zstart:zend) = 12;
 
 zstart=zend+1;
-zend = zstart+1;
+zend = floor(zstart+dc/dz);
 ER(zstart:zend) = 3.46;
 
-
-disp(ER);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Source
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -177,7 +174,7 @@ for t = 1:STEPS
  end
  
  
- if(mod(t,10) == 0)
+ if(mod(t,1000) == 0)
    h = subplot(11,1,1:4);
    Draw1D(ER, Ey, Hx, dz);
    axis([za(1) za(Nz) -1.5 1.5]);
@@ -194,9 +191,10 @@ for t = 1:STEPS
    axis([FREQ(1) FREQ(NFREQ) -0.1 1.5]);
    xlabel('Frequency');
    title('Reflectance and Transmittance');
+   drawnow();
  end
    
-drawnow();
+
   
             
   %if(mod(t,50) == 0)

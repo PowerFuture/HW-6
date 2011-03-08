@@ -17,6 +17,7 @@ u0 = 1.256637061*10^-6; %H/m
 
 f_max = FREQ(length(FREQ));
 nmax = Getnmax(rER, rUR);
+
 %Compute Grid Resolution
 % Wave Length Rsolution
 N_lambda = GetNlambda(rER, rUR);
@@ -29,8 +30,8 @@ d_d = dc/4;
 
 % Calculate grid resolution dz
 dz = min(d_lambda, d_d);
-Nz = ceil(dc/dz);
-dz = dc/Nz;
+Nprime = ceil(dc/dz);
+dz = dc/Nprime;
 
 % Add free space buffer and TF/SF
 buffer = ceil(d_lambda/dz) * 5;
@@ -48,7 +49,7 @@ t0 = 6*tau;              % Delay/Pulse Position
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cf = floor((Nz - buffert)/length(rUR)); % Conversion factor to convert our real grid to our numerical grid
+cf = floor((Nz - buffert)/length(rER)); % Conversion factor to convert our real grid to our numerical grid
 
 %Material Vectors
 ER = zeros([1 Nz]);
@@ -140,6 +141,7 @@ disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 
+disp(['f_max' num2str(f_max)]);
 disp(['lamda_min: ' num2str(lambda_min)]);
 disp(['d_lambda: ' num2str(d_lambda)]);
 disp(['nmax: ' num2str(nmax)]);
@@ -148,13 +150,18 @@ disp(['d_d: ' num2str(d_d)]);
 disp(['Nz: ' num2str(Nz)]);
 disp(['buffer: ' num2str(buffer)]);
 disp(['dz: ' num2str(dz)]);
+disp(['Length: ' num2str(Nz*dz)]);
 disp(['dt: ' num2str(dt)]);
 disp(['tau: ' num2str(tau)]);
 disp(['t0: ' num2str(t0)]);
 disp(['STEPS: ' num2str(STEPS)]);
 disp(['s: ' num2str(s)]);
 disp(['A: ' num2str(A)]);
+disp('ER: ');
 disp(ER);
+disp('UR: ');
+disp(UR);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Execute Simulation
@@ -195,7 +202,7 @@ for t = 1:STEPS
  
  if(mod(t,20) == 0)
    h = subplot(11,1,1:4);
-   draw1d(ER, Ey, Hx, dz);
+   Draw1D(ER, Ey, Hx, dz);
    axis([za(1) za(Nz) -1.5 1.5]);
    xlabel('z');
    title(['Field at Step ' num2str(t) ' of ' num2str(STEPS)]);    
@@ -210,9 +217,9 @@ for t = 1:STEPS
    axis([FREQ(1) FREQ(NFREQ) -0.1 1.5]);
    xlabel('Frequency');
    title('Reflectance and Transmittance');
+   drawnow();
  end
    
-drawnow();
   
             
   %if(mod(t,50) == 0)

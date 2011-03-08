@@ -1,4 +1,4 @@
-function FDTD1D( dc, rER, rUR, Steps, FREQ, NFREQ )
+function FDTD1D( dc, Length, rER, rUR, Steps, Buffer, FREQ, NFREQ, Update )
 %FDTD1D Method executes a FDTD1D Model
 %   Detailed explanation goes here
 
@@ -17,6 +17,7 @@ u0 = 1.256637061*10^-6; %H/m
 
 f_max = FREQ(length(FREQ));
 nmax = Getnmax(rER, rUR);
+
 %Compute Grid Resolution
 % Wave Length Rsolution
 N_lambda = GetNlambda(rER, rUR);
@@ -29,14 +30,24 @@ d_d = dc/4;
 
 % Calculate grid resolution dz
 dz = min(d_lambda, d_d);
-Nz = ceil(dc/dz);
-dz = dc/Nz;
+N_prime = ceil(dc/dz);
+dz = dc/N_prime;
+
+% Calculate Grid Size
+Nz = ceil(Length/dz);
 
 % Add free space buffer and TF/SF
-buffer = ceil(d_lambda/dz) * 5;
-buffert = buffer*2 + 3;
+if(Buffer == -1)
+  buffer = ceil(d_lambda/dz) * 5;
+  buffert = buffer*2 + 3;
+else
+  buffer = Buffer;
+  buffert = buffer*2;
+end
+
 Nz = Nz + buffert;
 
+  
 %Compute Time Steps
 dt = dz/(2*c0); %secs
 
@@ -48,7 +59,7 @@ t0 = 6*tau;              % Delay/Pulse Position
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cf = floor((Nz - buffert)/length(rUR)); % Conversion factor to convert our real grid to our numerical grid
+cf = floor((Nz - buffert)/length(rER)); % Conversion factor to convert our real grid to our numerical grid
 
 %Material Vectors
 ER = zeros([1 Nz]);
@@ -60,10 +71,12 @@ UR = zeros([1 Nz]);
 % Lets place our real grid in proper location on numerical grid
 for i = 0 : length(rER)-1
   index = buffer+2 + i*cf+1;
-  %disp(['i: ' num2str(i) ' i2: ' num2str(index)]);
+%  disp(['i: ' num2str(i) ' i2: ' num2str(index)]);
   ER(index) = rER(i+1);
   UR(index) = rUR(i+1);
 end
+
+
 
 % Need to backfill in our values
 ER(1:buffer+2) = 1;
@@ -81,9 +94,6 @@ for i=buffer+2 : length(ER-buffer-1)
   end
 end
 
-%ER(5) = 3.4641;
-%ER(31) = 3.4641;
-%ER(6:30) = 12;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -135,6 +145,10 @@ TRN = zeros(1, NFREQ);
 SRC = zeros(1, NFREQ);
 K = exp(-1i*2*pi*dt*FREQ);
 
+K24 = exp(-1i*2*pi*dt*2.4e9);
+REF24 = zeros(1, Nz);
+TRN24 = zeros(1, Nz);
+SRC24 = zeros(1, Nz);
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
@@ -149,13 +163,18 @@ disp(['d_d: ' num2str(d_d)]);
 disp(['Nz: ' num2str(Nz)]);
 disp(['buffer: ' num2str(buffer)]);
 disp(['dz: ' num2str(dz)]);
+disp(['Length: ' num2str(Nz*dz)]);
 disp(['dt: ' num2str(dt)]);
 disp(['tau: ' num2str(tau)]);
 disp(['t0: ' num2str(t0)]);
 disp(['STEPS: ' num2str(STEPS)]);
 disp(['s: ' num2str(s)]);
 disp(['A: ' num2str(A)]);
-disp(ER);
+% disp(['ER: ' num2str(length(ER))]);
+% disp(ER);
+% disp(['UR: ' num2str(length(UR))]);;
+% disp(UR);
+% return;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Execute Simulation
@@ -194,7 +213,12 @@ for t = 1:STEPS
  end
  
  
- if(mod(t,20) == 0)
+ for n = 1 : Nz
+   REF24(n) = REF24(n) + (K24^t)*Ey(n)*dt;
+ end
+   
+ 
+ if(mod(t,Update) == 0 || t == 1)
    h = subplot(11,1,1:4);
    Draw1D(ER, Ey, Hx, dz);
    axis([za(1) za(Nz) -1.5 1.5]);
@@ -211,9 +235,9 @@ for t = 1:STEPS
    axis([FREQ(1) FREQ(NFREQ) -0.1 1.5]);
    xlabel('Frequency');
    title('Reflectance and Transmittance');
+   drawnow();
  end
    
-drawnow();
   
             
   %if(mod(t,50) == 0)
@@ -234,7 +258,7 @@ CON = REF+TRN;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fig = figure;
 SetFigure(fig, 'HW#5-P2', [500 274 965 826]);
-
+h = subplot(11,1,1:4);
 plot(FREQ, REF, '-r', 'LineWidth', 2); hold on;
 plot(FREQ, TRN, '-b', 'LineWidth', 2);
 plot(FREQ, CON, ':k', 'LineWidth', 3); hold off;
@@ -242,8 +266,10 @@ axis([FREQ(1) FREQ(NFREQ) -0.1 1.2]);
 xlabel('Frequency');
 title('Reflectance and Transmittance');
 
+REF24 = abs(REF).^2;
 
-
+subplot(11,1,8:11)
+plot(za, REF24, '-r', 'LineWidth', 2);
 
 
 

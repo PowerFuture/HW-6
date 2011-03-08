@@ -18,12 +18,21 @@ u0 = 1.256637061*10^-6; %H/m
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Simulated Environment Settings
-STEPS = 2000;
-Nz = 180;
-dz = 0.02;
-f_max = 5e9;  % 10Ghz
-dc = .016779;
-nmax = 3.4641;
+f_max = 5e9;  % 5Ghz
+f0 = 2.4e9; % Anti-reflective frequency;
+
+erair = 1;
+erslab = 12;
+dslab = 12*2.54 / 100;
+
+% Find our anti-reflective info
+er2 = sqrt(erair*erslab);
+n2 = sqrt(er2);
+lam0 = c0/f0;
+d2 = lam0/(4*n2);
+
+nmax = sqrt(erslab);
+dc = d2;
 
 %Compute Grid Resolution
 N_lambda = 20;
@@ -36,14 +45,14 @@ Nz = ceil(dc/dz);
 dz = dc/Nz;
 
 Nz = Nz + 2*(10) + 3;
-
+%Nz = 426;
 disp(['lambda_min: ' num2str(lambda_min)]);
 disp(['d_wl: ' num2str(d_wl)]);
 disp(['dc: ' num2str(dc)]);
 disp(['d_d: ' num2str(d_d)]);
 disp(['Nz: ' num2str(Nz)]);
 disp(['dz: ' num2str(dz)]);
-
+disp(['Length: ' num2str(Nz * dz)]);
 %Grid Axis
 za=[0:Nz-1]*dz;
 
@@ -52,7 +61,7 @@ dt = dz/(2*c0); %secs
 
 % Source Parameters
 nzc = 2;  %Position of Sources
-NFREQ = f_max / 10e6; %Frequencies every 100Mhz upto 10Ghz
+NFREQ = 1000;%f_max / 10e6; %Frequencies every 100Mhz upto 10Ghz
 FREQ = linspace(0, f_max, NFREQ); %FREQ List
 tau = 0.5/f_max;        % tau parameter
 t0 = 6*tau;              % Delay/Pulse Position
@@ -79,17 +88,17 @@ ta = [0:STEPS-1]*dt;     % Time Axis;
 ER = ones([1 Nz]);
 UR = ones([1 Nz]);
 
-zstart = 2+10+1;
-zend = zstart;
-rER(zstart: zend) = 3.46;
+zstart = 2+10+1-1;
+zend = zstart + dc/dz;
+ER(zstart: zend) = 3.46;
 
 zstart = zend + 1;
-zend = zstart + ceil(d_radome)+1;
-rER(zstart:zend) = e_radome;
+zend = zstart + .3048/dz;
+ER(zstart:zend) = 12;
 
 zstart=zend+1;
-zend = zstart;
-rER(zstart:zend) = e_nonreflective;
+zend = zstart+dc/dz;
+ER(zstart:zend) = 3.46;
 
 
 disp(ER);
@@ -165,11 +174,10 @@ for t = 1:STEPS
  end
  
  
- if(mod(t,10) == 0)
+ if(mod(t,1000) == 0)
    h = subplot(11,1,1:4);
-   plot(za, Ey, '-b'); hold on;
-   plot(za, Hx, '-r'); hold off;
-   axis([za(1) za(Nz) -1.1 1.1]);
+   Draw1D(ER, Ey, Hx, dz);
+   axis([za(1) za(Nz) -1.5 1.5]);
    xlabel('z');
    title(['Field at Step ' num2str(t) ' of ' num2str(STEPS)]);    
  
