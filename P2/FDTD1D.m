@@ -259,9 +259,9 @@ CON = REF+TRN;
 fig = figure;
 SetFigure(fig, 'HW#5-P2', [500 274 965 826]);
 h = subplot(11,1,1:4);
-plot(FREQ, REF, '-r', 'LineWidth', 2); hold on;
-plot(FREQ, TRN, '-b', 'LineWidth', 2);
-plot(FREQ, CON, ':k', 'LineWidth', 3); hold off;
+plot(FREQ, 10*log10(REF), '-r', 'LineWidth', 2); hold on;
+plot(FREQ, 10*log10(TRN), '-b', 'LineWidth', 2);
+plot(FREQ, 10*log10(CON), ':k', 'LineWidth', 3); hold off;
 axis([FREQ(1) FREQ(NFREQ) -0.1 1.2]);
 xlabel('Frequency');
 title('Reflectance and Transmittance');
@@ -269,7 +269,7 @@ title('Reflectance and Transmittance');
 REF24 = abs(REF).^2;
 
 subplot(11,1,8:11)
-plot(za, REF24, '-r', 'LineWidth', 2);
+plot(REF24, '-r', 'LineWidth', 2);
 
 
 
