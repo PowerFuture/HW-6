@@ -34,11 +34,11 @@ erSiO2 = nSiO2^2;
 Periods = 10;
 
 %Calculate the Length of our layers.
-LSiN = lambda_0/(4*nSiN) / nanometers;
+LSiN = lambda_0/(4*nSiN) / nanometers; 
 LSiO2 = lambda_0/(4*nSiO2) / nanometers;
 
 
-dc = LSiN+LSiO2*nanometers; %nmeters Our critical dimension in this case is the width of one period.
+dc = LSiN+LSiO2;%meters Our critical dimension in this case is the width of one period.
 Length = ((LSiN+LSiO2)) * Periods;
 
 rNz = ceil(Length); %This Nz represents real world size
@@ -56,7 +56,7 @@ for n = 1: Periods
   rER(nstart:nend) = erSiN;
   
   nstart = nend+1;
-  nend = round(LSiO2) -1;
+  nend = nstart+ round(LSiO2) -1;
   rER(nstart:nend) = erSiO2;
   
   nstart = nend+1;
@@ -69,9 +69,6 @@ freq_end = 1100*nanometers/c0;%f_trans*2; %1Ghz
 
 NFREQ = freq_end / 100/c0; %Frequencies every 100nm
 FREQ = linspace(freq_start, freq_end, NFREQ); %FREQ List
-
-disp(rER);
-return;
 
 FDTD1D( dc, Length, rER, rUR, -1, -1, FREQ, NFREQ, 2000);
 
