@@ -1,113 +1,101 @@
-function FDTD1D( dc, Length, rER, rUR, Steps, Buffer, FREQ, NFREQ, Update, SSFREQ )
-%FDTD1D Method executes a FDTD1D Model
-%   Detailed explanation goes here
+%FDTD1D
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Pre-Program Work
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Initialize MATLAB
+close all; clc;
+clear all; 
 
 %Constants
 c0 = 299792458; %m/s
 e0 = 8.854187817*10^-12; %F/m
 u0 = 1.256637061*10^-6; %H/m
 
+nanometers = 1e-9;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Initialization of Parameters
+%  Initialization
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-f_max = FREQ(length(FREQ));
-nmax = Getnmax(rER, rUR);
+%Simulated Environment Settings
+NLAM = 5e9;  % 5Ghz
+lambda_0 = 980*nanometers; % Anti-reflective frequency;
+lambda_max = 900*nanometers;
+PERIODS = 15;
+
+nSiN = 2.0;
+erSiN = nSiN^2;
+
+nSiO2 = 1.5;
+erSiO2 = nSiO2^2;
+nmax = nSiN;
+
+%Calculate the Length of our layers.
+LSiN = lambda_0/(4*nSiN); 
+LSiO2 = lambda_0/(4*nSiO2);
+
+dc = LSiN;%meters Our critical dimension in this case is the width of one period.
+
 
 %Compute Grid Resolution
-% Wave Length Rsolution
-N_lambda = GetNlambda(rER, rUR);
-lambda_min = c0 / (f_max);
-d_lambda = lambda_min/N_lambda/nmax;
-
-% Structure Resolution
+N_lambda = 20;
+d_wl = lambda_max/N_lambda/nmax;
 N_d = 4;
-d_d = dc/4; 
+d_d = dc/4; % since we are only working with freespace we will set d to 1;
+dz = min(d_wl, d_d);
+Nprime = ceil(dc/dz);
+dz = dc/Nprime;
 
-% Calculate grid resolution dz
-dz = min(d_lambda, d_d);
-N_prime = ceil(dc/dz);
-dz = dc/N_prime;
+Nz = PERIODS*ceil((LSiN+LSiO2)/dz);
 
-% Calculate Grid Size
-Nz = ceil(Length/dz);
 
-% Add free space buffer and TF/SF
-if(Buffer == -1)
-  buffer = ceil(d_lambda/dz) * 5;
-  buffert = buffer*2 + 3;
-else
-  buffer = Buffer;
-  buffert = buffer*2;
-end
+Nz = Nz + 2*(100) + 3;
 
-Nz = Nz + buffert;
 
-  
+%Grid Axis
+za=[0:Nz-1]*dz;
+
 %Compute Time Steps
 dt = dz/(2*c0); %secs
 
 % Source Parameters
-nzc = 2;  %Position of Sources at our TF/SF boundary
-tau = 0.5/f_max;        % tau parameter
+nzc = 2;  %Position of Sources
+NLAM = 100;
+LAMBDA = linspace(900, 1100, NLAM)*nanometers; %FREQ List
+tau = 0.5/(c0/lambda_max);        % tau parameter
 t0 = 6*tau;              % Delay/Pulse Position
+
+T = 12*tau + 5*(nmax*Nz*dz/c0);
+STEPS = ceil(T/dt);
+STEPS=40000;
+
+ta = [0:STEPS-1]*dt;     % Time Axis;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cf = floor((Nz - buffert)/length(rER)); % Conversion factor to convert our real grid to our numerical grid
 
 %Material Vectors
-ER = zeros([1 Nz]);
-UR = zeros([1 Nz]);
- 
-% We Need to lay our real materials vectors over our numerical material
-% grid
- 
-% Lets place our real grid in proper location on numerical grid
-for i = 0 : length(rER)-1
-  index = buffer+2 + i*cf+1;
-%  disp(['i: ' num2str(i) ' i2: ' num2str(index)]);
-  ER(index) = rER(i+1);
-  UR(index) = rUR(i+1);
-end
+ER = ones([1 Nz]);
+UR = ones([1 Nz]);
+
+nstart = 100+2;
+nend = nstart;
 
 
-
-% Need to backfill in our values
-ER(1:buffer+2) = 1;
-ER(length(ER)-buffer-1:length(UR)) = 1;
-UR(1:buffer+2) = 1;
-UR(length(UR)-buffer-1:length(UR)) = 1;
- 
-for i=buffer+2 : length(ER-buffer-1)
-  if(ER(i) == 0)
-    ER(i) = ER(i-1);
-  end
+for p = 1:PERIODS
+  nend = nstart + round(LSiN/dz)-1;
+  ER(nstart:nend) = erSiN;
   
-  if(UR(i) == 0)
-    UR(i) = UR(i-1);
-  end
-end
+  nstart = nend+1;
+  nend = nstart+ round(LSiO2/dz) -1;
+  ER(nstart:nend) = erSiO2;
+   
+  nstart = nend+1;
+end;
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Calculate STEPS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-STEPS = Steps;
-if(STEPS == -1)
-  tprop = (nmax*Nz*dz)/c0; % Wave Propagation time;
-  T = 12*tau + 5*tprop;
-  STEPS = ceil(T/dt);
-end
-
-ta = [0:STEPS-1]*dt;     % Time Axis;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Source
@@ -118,13 +106,10 @@ A = -sqrt(ER(nzc)/UR(nzc));    % H Amplitude
 Hsrc = A*exp(-((ta-t0+s)/tau).^2); % H Source
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %FDTD Initialization
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%Grid Axis
-za=[0:Nz-1]*dz;
-
 
 % Compute Update Coefficients
 mER = (c0*dt/dz)./ER;
@@ -140,20 +125,16 @@ h1 = 0; h2 = 0; h3 = 0;
 e1 = 0; e2 = 0; e3 = 0;
 
 %Power Measurements
-REF = zeros(1, NFREQ);
-TRN = zeros(1, NFREQ);
-SRC = zeros(1, NFREQ);
-K = exp(-1i*2*pi*dt*FREQ);
-
-SSFK = exp(-1i*2*pi*dt*SSFREQ);
-SSFPOWER = zeros(1, Nz);
-SSFSRC = zeros(1, Nz);
+REF = zeros(1, NLAM);
+TRN = zeros(1, NLAM);
+SRC = zeros(1, NLAM);
+K = exp(-1i*2*pi*dt*(c0./LAMBDA));
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 
-disp(['f_max' num2str(f_max)]);
+disp(['' num2str(f_max)]);
 disp(['lamda_min: ' num2str(lambda_min)]);
 disp(['d_lambda: ' num2str(d_lambda)]);
 disp(['nmax: ' num2str(nmax)]);
@@ -174,6 +155,8 @@ disp(['A: ' num2str(A)]);
 % disp(['UR: ' num2str(length(UR))]);;
 % disp(UR);
 % return;
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Execute Simulation
@@ -205,21 +188,14 @@ for t = 1:STEPS
   e3=e2; e2=e1; e1=Ey(Nz); % Boundary Params;
  
  %Update Fourier Transforms
- for nf = 1: NFREQ
+ for nf = 1: NLAM
    REF(nf) = REF(nf) + (K(nf)^t)*Ey(1)*dt;
    TRN(nf) = TRN(nf) + (K(nf)^t)*Ey(Nz)*dt;
    SRC(nf) = SRC(nf) + (K(nf)^t)*Esrc(t)*dt;
  end
  
  
- if(SSFREQ ~= -1)
-   for n = 3 : Nz-1
-     SSFPOWER(n) = SSFPOWER(n) + (SSFK^t)*Ey(n)*dt;
-     SSFSRC(n) = SSFSRC(n) + (SSFK^t)*Esrc(t)*dt;
-   end
- end   
- 
- if(mod(t,Update) == 0 || t == 1)
+ if(mod(t,1000) == 0)
    h = subplot(11,1,1:4);
    Draw1D(ER, Ey, Hx, dz);
    axis([za(1) za(Nz) -1.5 1.5]);
@@ -230,15 +206,16 @@ for t = 1:STEPS
    T = abs(TRN./SRC).^2;
 
    subplot(11,1,8:11)
-   plot(FREQ, R, '-r'); hold on;
-   plot(FREQ, T, '-b');
-   plot(FREQ, R+T, ':k', 'LineWidth', 2); hold off;
-   axis([FREQ(1) FREQ(NFREQ) -0.1 1.5]);
+   plot(LAMBDA/nanometers, 10*log10(R), '-r'); hold on;
+   plot(LAMBDA/nanometers, 10*log10(T), '-b');
+   plot(LAMBDA/nanometers, 10*log10(R+T), ':k', 'LineWidth', 2); hold off;
+   axis([LAMBDA(1)/nanometers LAMBDA(NLAM)/nanometers -50 0]);
    xlabel('Frequency');
    title('Reflectance and Transmittance');
    drawnow();
  end
    
+
   
             
   %if(mod(t,50) == 0)
@@ -254,38 +231,19 @@ REF = abs(REF./SRC).^2;
 TRN = abs(TRN./SRC).^2;
 CON = REF+TRN;
 
-if(SSFREQ ~= -1)
-  SSFPOWER = abs(SSFPOWER./SSFSRC).^2;
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot Fields
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fig = figure;
 SetFigure(fig, 'HW#5-P2', [500 274 965 826]);
 
-if(SSFREQ ~= -1)
-  subplot(11,1,1:4);
-end;
-
-plot(FREQ, REF, '-r', 'LineWidth', 2); hold on;
-plot(FREQ, TRN, '-b', 'LineWidth', 2);
-plot(FREQ, CON, ':k', 'LineWidth', 3); hold off;
-axis([FREQ(1) FREQ(NFREQ) -0.1 1.2]);
+plot(LAMBDA/nanometers, 10*log10(R), '-r'); hold on;
+plot(LAMBDA/nanometers, 10*log10(T), '-b', 'LineWidth', 2);
+plot(LAMBDA/nanometers, 10*log10(R+T), ':k', 'LineWidth', 2); hold off;
+axis([LAMBDA(1)/nanometers LAMBDA(NLAM)/nanometers -50 0]);
 xlabel('Frequency');
 title('Reflectance and Transmittance');
-legend('Reflectance','Transmittance','Conversvation','Location','Sout');
-
-
-if SSFREQ ~= -1
-  subplot(11,1,8:11)
-  plot(SSFPOWER, '-r', 'LineWidth', 2);
-  axis([3 Nz-1  -0.1  1.2]);
-  xlabel('Nz');
-  title('Steady State Field');
-end
 
 
 
-end
 

@@ -39,7 +39,7 @@ LSiO2 = lambda_0/(4*nSiO2) / nanometers;
 
 
 dc = LSiN+LSiO2;%meters Our critical dimension in this case is the width of one period.
-Length = ((LSiN+LSiO2)) * Periods;
+Length = ((LSiN+LSiO2)) * Periods+2;
 
 rNz = ceil(Length); %This Nz represents real world size
 
@@ -48,10 +48,13 @@ rER = ones([1 rNz]);
 rUR = ones([1 rNz]); 
 
 % Add our Materials to the model
-nstart = 1;
+nstart = 100+2;
 nend = nstart;
 
-for n = 1: Periods
+disp(['Periods: ' PERIODS]);
+
+for n = 1: PERIODS
+  disp(['Period: ' num2str(n)]);
   nend = nstart + round(LSiN)-1;
   rER(nstart:nend) = erSiN;
   
@@ -70,7 +73,7 @@ freq_end = 1100*nanometers/c0;%f_trans*2; %1Ghz
 NFREQ = freq_end / 100/c0; %Frequencies every 100nm
 FREQ = linspace(freq_start, freq_end, NFREQ); %FREQ List
 
-FDTD1D( dc, Length, rER, rUR, -1, -1, FREQ, NFREQ, 2000);
+FDTD1D( dc*nanometers, Length*nanometers, rER, rUR, -1, -1, FREQ, NFREQ, 2000);
 
 
 

@@ -63,7 +63,7 @@ freq_end = 5e9;%f_trans*2; %1Ghz
 NFREQ = freq_end / 10e6; %Frequencies every 100Mhz upto 5Gz
 FREQ = linspace(freq_start, freq_end, NFREQ); %FREQ List
 
-FDTD1D( dc, (d_radome+2*d_nonreflective), rER, rUR, 35000, 100, FREQ, NFREQ, 10);
+FDTD1D( dc, (d_radome+2*d_nonreflective), rER, rUR, 35000, 100, FREQ, NFREQ, 1000, 2.4e9, 'HW#6-P2-Invisible Slab');
 
 
 

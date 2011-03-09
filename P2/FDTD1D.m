@@ -1,4 +1,4 @@
-function FDTD1D( dc, Length, rER, rUR, Steps, Buffer, FREQ, NFREQ, Update )
+function FDTD1D( dc, Length, rER, rUR, Steps, Buffer, FREQ, NFREQ, Update, SSFREQ, Title )
 %FDTD1D Method executes a FDTD1D Model
 %   Detailed explanation goes here
 
@@ -21,8 +21,8 @@ nmax = Getnmax(rER, rUR);
 %Compute Grid Resolution
 % Wave Length Rsolution
 N_lambda = GetNlambda(rER, rUR);
-lambda_min = c0 / (f_max*nmax);
-d_lambda = lambda_min/N_lambda;
+lambda_min = c0 / (f_max);
+d_lambda = lambda_min/N_lambda/nmax;
 
 % Structure Resolution
 N_d = 4;
@@ -145,10 +145,9 @@ TRN = zeros(1, NFREQ);
 SRC = zeros(1, NFREQ);
 K = exp(-1i*2*pi*dt*FREQ);
 
-K24 = exp(-1i*2*pi*dt*2.4e9);
-REF24 = zeros(1, Nz);
-TRN24 = zeros(1, Nz);
-SRC24 = zeros(1, Nz);
+SSFK = exp(-1i*2*pi*dt*SSFREQ);
+SSFPOWER = zeros(1, Nz);
+SSFSRC = zeros(1, Nz);
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
@@ -213,10 +212,12 @@ for t = 1:STEPS
  end
  
  
- for n = 1 : Nz
-   REF24(n) = REF24(n) + (K24^t)*Ey(n)*dt;
- end
-   
+ if(SSFREQ ~= -1)
+   for n = 3 : Nz-1
+     SSFPOWER(n) = SSFPOWER(n) + (SSFK^t)*Ey(n)*dt;
+     SSFSRC(n) = SSFSRC(n) + (SSFK^t)*Esrc(t)*dt;
+   end
+ end   
  
  if(mod(t,Update) == 0 || t == 1)
    h = subplot(11,1,1:4);
@@ -253,25 +254,36 @@ REF = abs(REF./SRC).^2;
 TRN = abs(TRN./SRC).^2;
 CON = REF+TRN;
 
+if(SSFREQ ~= -1)
+  SSFPOWER = abs(SSFPOWER./SSFSRC).^2;
+end
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot Fields
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fig = figure;
-SetFigure(fig, 'HW#5-P2', [500 274 965 826]);
-h = subplot(11,1,1:4);
-plot(FREQ, 10*log10(REF), '-r', 'LineWidth', 2); hold on;
-plot(FREQ, 10*log10(TRN), '-b', 'LineWidth', 2);
-plot(FREQ, 10*log10(CON), ':k', 'LineWidth', 3); hold off;
+SetFigure(fig, Title, [500 274 965 826]);
+
+if(SSFREQ ~= -1)
+  subplot(11,1,1:4);
+end;
+
+plot(FREQ, REF, '-r', 'LineWidth', 2); hold on;
+plot(FREQ, TRN, '-b', 'LineWidth', 2);
+plot(FREQ, CON, ':k', 'LineWidth', 3); hold off;
 axis([FREQ(1) FREQ(NFREQ) -0.1 1.2]);
 xlabel('Frequency');
 title('Reflectance and Transmittance');
-
-REF24 = abs(REF).^2;
-
-subplot(11,1,8:11)
-plot(REF24, '-r', 'LineWidth', 2);
+legend('Reflectance','Transmittance','Consersvation','Location','SouthEast');
 
 
+if SSFREQ ~= -1
+  subplot(11,1,8:11)
+  plot(SSFPOWER, '-r', 'LineWidth', 2);
+  axis([3 Nz-1  -0.1  1.2]);
+  xlabel('Nz');
+  title('Steady State Field');
+end
 
 
 
