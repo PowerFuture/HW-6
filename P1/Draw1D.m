@@ -1,9 +1,12 @@
 function Draw1D( ER, E, H, dz )
 
+   %Initialize
    za=[0:length(E)-1]*dz;
-   basecolor = [1 1 1];
+   
+   % Just inverse our Permitivity to get grayscale value
    Color = 1./ER;
 
+   % Need to do an initial draw so we can start the hold for plotting.
    fill(0,0,'-w');   hold on;
    i = 1;
    count = 0;
@@ -32,6 +35,7 @@ function Draw1D( ER, E, H, dz )
     end
    end
 
+   %Plot Fields
    plot(za, E, '-b'); 
    plot(za, H, '-r'); 
    
