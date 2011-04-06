@@ -132,7 +132,7 @@ K = exp(-1i*2*pi*dt*(c0./LAMBDA));
 
 SSFK = exp(-1i*2*pi*dt*c0./lambda_0);
 SSFPOWER = zeros(1, Nz);
-SSFSRC = zeros(1, Nz);
+SSFSRC = 0;
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
@@ -196,10 +196,9 @@ for t = 1:STEPS
    SRC(nf) = SRC(nf) + (K(nf)^t)*Esrc(t)*dt;
  end
  
-  for n = 3 : Nz-1
-   SSFPOWER(n) = SSFPOWER(n) + (SSFK^t)*Ey(n)*dt;
-   SSFSRC(n) = SSFSRC(n) + (SSFK^t)*Esrc(t)*dt;
-  end
+   SSFPOWER = SSFPOWER + (SSFK^t)*Ey*dt;
+   SSFSRC = SSFSRC + (SSFK^t)*Esrc(t)*dt;
+  
    
  if(mod(t,1000) == 0)
    h = subplot(11,1,1:4);
@@ -237,7 +236,7 @@ REF = abs(REF./SRC).^2;
 TRN = abs(TRN./SRC).^2;
 CON = REF+TRN;
 
-SSFPOWER = abs(SSFPOWER./SSFSRC).^2;
+SSFPOWER = SSFPOWER/SSFSRC;
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plot Fields
@@ -255,8 +254,15 @@ title('Reflectance and Transmittance');
 legend('Reflectance','Transmittance','Consersvation','Location','SouthEast');
 
 
+
+% PLOT STEADY-STATE FIELD
 subplot(11,1,8:11)
-plot(SSFPOWER, '-r', 'LineWidth', 2);
-axis([3 Nz-1  -0.1  5]);
-xlabel('Nz');
-title('Steady State Field');
+h = Draw1D(ER,abs(SSFPOWER),-1, dz/nanometers);
+axis([za(1)/nanometers za(Nz)/nanometers 0 (max(SSFPower) + 1) ]);
+xlabel('z (nm)');
+h2 = get(h,'Parent');
+set(h2,'FontSize',14,'LineWidth',2);
+title(['STEADY-STATE FIELD @ ' num2str(lambda_0/nanometers) ' NM']);
+xlabel('z (meters)');
+ylabel('|E|','Rotation',0,'HorizontalAlignment','right');
+

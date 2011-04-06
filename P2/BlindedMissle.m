@@ -31,7 +31,7 @@ erSiN = nSiN^2;
 nSiO2 = 1.5;
 erSiO2 = nSiO2^2;
 
-Periods = 10;
+PERIODS = 10;
 
 %Calculate the Length of our layers.
 LSiN = lambda_0/(4*nSiN) / nanometers; 

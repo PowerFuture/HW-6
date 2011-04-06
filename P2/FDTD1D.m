@@ -6,6 +6,18 @@ function FDTD1D( dc, Length, rER, rUR, Steps, Buffer, FREQ, NFREQ, Update, SSFRE
 %  Pre-Program Work
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% UNITS
+meters = 1;
+centimeters = 1e-2 * meters;
+millimeters = 1e-3 * meters;
+inches = 2.54 * centimeters;
+feet = 12 * inches;
+seconds = 1;
+hertz = 1/seconds;
+kilohertz = 1e3 * hertz;
+megahertz = 1e6 * hertz;
+gigahertz = 1e9 * hertz;
+
 %Constants
 c0 = 299792458; %m/s
 e0 = 8.854187817*10^-12; %F/m
@@ -49,7 +61,8 @@ Nz = Nz + buffert;
 
   
 %Compute Time Steps
-dt = dz/(2*c0); %secs
+nsrc = 1;  %Source is injected in air
+dt = nsrc * dz/(2*c0); %secs
 
 % Source Parameters
 nzc = 2;  %Position of Sources at our TF/SF boundary
@@ -147,7 +160,7 @@ K = exp(-1i*2*pi*dt*FREQ);
 
 SSFK = exp(-1i*2*pi*dt*SSFREQ);
 SSFPOWER = zeros(1, Nz);
-SSFSRC = zeros(1, Nz);
+SSFSRC = 0;
 
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
 disp('% Parameters');
@@ -169,6 +182,7 @@ disp(['t0: ' num2str(t0)]);
 disp(['STEPS: ' num2str(STEPS)]);
 disp(['s: ' num2str(s)]);
 disp(['A: ' num2str(A)]);
+disp(['SSFREQ: ' num2str(SSFREQ)]);
 % disp(['ER: ' num2str(length(ER))]);
 % disp(ER);
 % disp(['UR: ' num2str(length(UR))]);;
@@ -213,29 +227,38 @@ for t = 1:STEPS
  
  
  if(SSFREQ ~= -1)
-   for n = 3 : Nz-1
-     SSFPOWER(n) = SSFPOWER(n) + (SSFK^t)*Ey(n)*dt;
-     SSFSRC(n) = SSFSRC(n) + (SSFK^t)*Esrc(t)*dt;
-   end
+     SSFPOWER = SSFPOWER + (SSFK^t)*Ey*dt;
+     SSFSRC = SSFSRC + (SSFK^t)*Esrc(t)*dt;
  end   
  
  if(mod(t,Update) == 0 || t == 1)
-   h = subplot(11,1,1:4);
-   Draw1D(ER, Ey, Hx, dz);
+   % draw field on top of materials
+   subplot(311);
+   Draw1D(ER,Ey,Hx,dz);
    axis([za(1) za(Nz) -1.5 1.5]);
    xlabel('z');
-   title(['Field at Step ' num2str(t) ' of ' num2str(STEPS)]);    
+   title(['FIELD AT STEP ' num2str(t) ' OF ' num2str(STEPS)]);
+  
  
    R = abs(REF./SRC).^2;
    T = abs(TRN./SRC).^2;
 
-   subplot(11,1,8:11)
-   plot(FREQ, R, '-r'); hold on;
-   plot(FREQ, T, '-b');
-   plot(FREQ, R+T, ':k', 'LineWidth', 2); hold off;
-   axis([FREQ(1) FREQ(NFREQ) -0.1 1.5]);
-   xlabel('Frequency');
-   title('Reflectance and Transmittance');
+   subplot(312);
+   plot(FREQ/gigahertz,R,'-r'); hold on;
+   plot(FREQ/gigahertz,T,'-b');
+   plot(FREQ/gigahertz,R+T,':k'); hold off;
+   axis([FREQ(1)/gigahertz FREQ(NFREQ)/gigahertz -0.1 1.5]);
+   xlabel('Frequency (GHz)');
+   title('REFLECTANCE AND TRANSMITTANCE');
+
+   % plot the steady-state field
+   subplot(313);
+   plot(za,abs(SSFPOWER/SSFSRC),'-b');
+   axis([za(1) za(Nz) -0.1 1.5]);
+   xlabel('z (meters)');
+   title('STEADY-STATE FIELD');
+
+  
    drawnow();
  end
    
@@ -255,7 +278,7 @@ TRN = abs(TRN./SRC).^2;
 CON = REF+TRN;
 
 if(SSFREQ ~= -1)
-  SSFPOWER = abs(SSFPOWER./SSFSRC).^2;
+  SSFPOWER = abs(SSFPOWER/SSFSRC);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -268,6 +291,7 @@ if(SSFREQ ~= -1)
   subplot(11,1,1:4);
 end;
 
+subplot(211);
 plot(FREQ, REF, '-r', 'LineWidth', 2); hold on;
 plot(FREQ, TRN, '-b', 'LineWidth', 2);
 plot(FREQ, CON, ':k', 'LineWidth', 3); hold off;
@@ -276,12 +300,29 @@ xlabel('Frequency');
 title('Reflectance and Transmittance');
 legend('Reflectance','Transmittance','Consersvation','Location','SouthEast');
 
+subplot(212);
+h = plot(FREQ/gigahertz,10*log10(REF),'-r','LineWidth',2);
+hold on;
+plot(FREQ/gigahertz,10*log10(TRN),'-b','LineWidth',2);
+plot(FREQ/gigahertz,10*log10(CON),':k','LineWidth',2);
+hold off;
+axis([FREQ(1)/gigahertz FREQ(NFREQ)/gigahertz -60 1 ]);
+h2 = get(h,'Parent');
+set(h2,'FontSize',14,'LineWidth',2);
+h = legend('Reflectance','Transmittance','Conservation');
+set(h,'Location','NorthEastOutside');
+xlabel('Frequency (GHz)');
+ylabel('dB','Rotation',0,'HorizontalAlignment','right');
 
+
+
+disp(SSFPOWER);
 if SSFREQ ~= -1
   subplot(11,1,8:11)
-  plot(SSFPOWER, '-r', 'LineWidth', 2);
-  axis([3 Nz-1  -0.1  1.2]);
-  xlabel('Nz');
+  %plot(SSFPOWER, '-r', 'LineWidth', 2);
+  Draw1D(ER, SSFPOWER, -1, dz);
+  axis([za(1) za(Nz)  0  max(SSFPOWER) + 0.5]);
+  xlabel('z');
   title('Steady State Field');
 end
 

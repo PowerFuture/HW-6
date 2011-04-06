@@ -1,15 +1,17 @@
 function Draw1D( ER, E, H, dz )
 
-   za=[0:length(E)-1]*dz;
+   %Initialize
+   ze=[0:length(E)-1]*dz;
+   zh = ze + dz/2;
    
-   values = unique(ER);
-   
-   basecolor = [1 1 1];
+   % Just inverse our Permitivity to get grayscale value
+   ER = ER - min(ER(:));
+   Color = (ER/max(ER(:)));
+   Color = abs(Color - 1);
+   disp(Color);
 
-   xstart = dz;
-   xend = dz*15; 
-   
-   fill(0,0,'-w');   hold on;
+   % Need to do an initial draw so we can start the hold for plotting.
+   cla;   hold on;
    i = 1;
    count = 0;
    prev = 0;
@@ -30,19 +32,20 @@ function Draw1D( ER, E, H, dz )
       
       x = [ xstart xend xend xstart xstart ];
       y = [ -1.5 -1.5 1.5 1.5 -1.5 ];
-      fill(x,y,[1 1 1]./ER(i-1));
-      
+      fill(x,y,[Color(i-1) Color(i-1) Color(i-1)], 'LineStyle', 'none', 'Marker', 'none');
       
       count = 1;
       prev = ER(i);
     end
-  
    end
 
-   plot(za, E, '-b'); 
-   plot(za, H, '-r'); 
+   %Plot Fields
+   plot(ze, E, '-b'); 
+   
+   if(H ~=-1)
+     plot(zh, H, '-r'); 
+   end;
    
    hold off;
-
 end
 

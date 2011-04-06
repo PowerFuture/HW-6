@@ -30,7 +30,7 @@ freq_end = 1e9; %1Ghz
 NFREQ = freq_end / 10e6; %Frequencies every 100Mhz upto 10Ghz
 FREQ = linspace(freq_start, freq_end, NFREQ); %FREQ List
 
-FDTD1D( dc, dc, rER, rUR, -1, -1, FREQ, NFREQ, 1000, -1, 'HW#6-P2-Dielectric Slab' );
+FDTD1D( dc, dc, rER, rUR, -1, 100, FREQ, NFREQ, 50, -1, 'HW#6-P2-Dielectric Slab' );
 
 
 
